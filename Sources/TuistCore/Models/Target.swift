@@ -2,13 +2,13 @@ import Basic
 import Foundation
 import TuistSupport
 
-public class Target: Equatable, Hashable {
+public struct Target: Equatable, Hashable {
     public typealias SourceFile = (path: AbsolutePath, compilerFlags: String?)
     public typealias SourceFileGlob = (glob: String, excluding: String?, compilerFlags: String?)
 
     // MARK: - Static
 
-    static let validSourceExtensions: [String] = ["m", "swift", "mm", "cpp", "c", "d", "intentdefinition"]
+    static let validSourceExtensions: [String] = ["m", "swift", "mm", "cpp", "c", "d", "intentdefinition", "xcmappingmodel"]
     static let validFolderExtensions: [String] = ["framework", "bundle", "app", "xcassets", "appiconset"]
 
     // MARK: - Attributes
@@ -22,7 +22,7 @@ public class Target: Equatable, Hashable {
 
     // An info.plist file is needed for (dynamic) frameworks, applications and executables
     // however is not needed for other products such as static libraries.
-    public var infoPlist: InfoPlist?
+    public private(set) var infoPlist: InfoPlist?
     public let entitlements: AbsolutePath?
     public let settings: Settings?
     public let dependencies: [Dependency]
@@ -116,18 +116,18 @@ public class Target: Equatable, Hashable {
 
             // Paths that should be excluded from sources
             let excluded = source.excluding
-                    .map { AbsolutePath($0).basename }
-                    .map { base.glob($0) }
-                    ?? []
+                .map { AbsolutePath($0) }
+                .map { excludePath in AbsolutePath(excludePath.dirname).glob(excludePath.basename) }
+                ?? []
 
             Set(base.glob(sourcePath.basename))
                 .subtracting(excluded)
                 .filter { path in
-                if let `extension` = path.extension, Target.validSourceExtensions.contains(`extension`) {
-                    return true
-                }
-                return false
-            }.forEach { sourceFiles[$0] = (path: $0, compilerFlags: source.compilerFlags) }
+                    if let `extension` = path.extension, Target.validSourceExtensions.contains(`extension`) {
+                        return true
+                    }
+                    return false
+                }.forEach { sourceFiles[$0] = (path: $0, compilerFlags: source.compilerFlags) }
         }
         return Array(sourceFiles.values)
     }
@@ -170,6 +170,14 @@ public class Target: Equatable, Hashable {
         hasher.combine(productName)
         hasher.combine(entitlements)
         hasher.combine(environment)
+    }
+
+    /// Returns a new copy of the target with the given InfoPlist set.
+    /// - Parameter infoPlist: InfoPlist to be set to the copied instance.
+    public func with(infoPlist: InfoPlist) -> Target {
+        var copy = self
+        copy.infoPlist = infoPlist
+        return copy
     }
 }
 

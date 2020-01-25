@@ -62,7 +62,10 @@ public class GraphLoader: GraphLoading {
             let projectPath = project.0
             let projectManifest = project.1
             return try projectManifest.targets.map { target in
-                try self.loadTarget(name: target.name, path: projectPath, graphLoaderCache: graphLoaderCache, graphCircularDetector: graphCircularDetector)
+                try self.loadTarget(name: target.name,
+                                    path: projectPath,
+                                    graphLoaderCache: graphLoaderCache,
+                                    graphCircularDetector: graphCircularDetector)
             }
         }
 
@@ -92,7 +95,9 @@ public class GraphLoader: GraphLoading {
     ///   - path: Path to the directory that contains the project.
     ///   - cache: Graph loading cache.
     ///   - graphCircularDetector: Graph circular detector
-    fileprivate func loadProject(at path: AbsolutePath, graphLoaderCache: GraphLoaderCaching, graphCircularDetector: GraphCircularDetecting) throws -> Project {
+    fileprivate func loadProject(at path: AbsolutePath,
+                                 graphLoaderCache: GraphLoaderCaching,
+                                 graphCircularDetector: GraphCircularDetecting) throws -> Project {
         if let project = graphLoaderCache.project(path) {
             return project
         } else {
@@ -190,7 +195,7 @@ public class GraphLoader: GraphLoading {
         // XCFramework
         case let .xcFramework(frameworkPath):
             return try loadXCFrameworkNode(path: frameworkPath, graphLoaderCache: graphLoaderCache)
-            
+
         // System SDK
         case let .sdk(name, status):
             return try SDKNode(name: name, platform: platform, status: status)
@@ -264,7 +269,7 @@ public class GraphLoader: GraphLoading {
         graphLoaderCache.add(cocoapods: node)
         return node
     }
-    
+
     /// Loads the XCFramework node. If it it exists in the cache, it returns it from the cache.
     /// Otherwise, it initializes it, stores it in the cache, and then returns it.
     ///
@@ -273,7 +278,8 @@ public class GraphLoader: GraphLoading {
     ///   - graphLoaderCache: Graph loader cache.
     fileprivate func loadXCFrameworkNode(
         path: AbsolutePath,
-        graphLoaderCache: GraphLoaderCaching) throws -> XCFrameworkNode {
-        return try XCFrameworkParser.parse(path: path, cache: graphLoaderCache)
+        graphLoaderCache: GraphLoaderCaching
+    ) throws -> XCFrameworkNode {
+        try XCFrameworkParser.parse(path: path, cache: graphLoaderCache)
     }
 }

@@ -41,6 +41,11 @@ public protocol Graphing: AnyObject, Encodable {
     /// Returns all the targets that are part of the graph.
     var targets: [TargetNode] { get }
 
+    /// Returns all target nodes at a given path (i.e. all target nodes in a project)
+    /// - Parameters:
+    ///   - path: Path to the directory where the project is located
+    func targets(at path: AbsolutePath) -> [TargetNode]
+
     /// Returns the target with the given name and at the given directory.
     /// - Parameters:
     ///   - path: Path to the directory where the project that defines the target is located.
@@ -52,6 +57,12 @@ public protocol Graphing: AnyObject, Encodable {
     ///   - path: Path to the directory where the project that defines the target is located.
     ///   - name: Name of the target.
     func targetDependencies(path: AbsolutePath, name: String) -> [TargetNode]
+
+    /// Returns all test targets directly dependent on the given target
+    /// - Parameters:
+    ///   - path: Path to the directory where the project that defines the target is located.
+    ///   - name: Name of the target.
+    func testTargetsDependingOn(path: AbsolutePath, name: String) -> [TargetNode]
 
     /// Returns all non-transitive target static dependencies for the given target.
     /// - Parameters:
@@ -146,6 +157,7 @@ public protocol Graphing: AnyObject, Encodable {
     func hostTargetNodeFor(path: AbsolutePath, name: String) -> TargetNode?
 }
 
+// swiftlint:disable:next type_body_length
 public class Graph: Graphing {
     // MARK: - Attributes
 
@@ -215,6 +227,13 @@ public class Graph: Graphing {
         cache.targetNodes.flatMap { $0.value.values }
     }
 
+    public func targets(at path: AbsolutePath) -> [TargetNode] {
+        guard let nodes = cache.targetNodes[path] else {
+            return []
+        }
+        return Array(nodes.values)
+    }
+
     public func target(path: AbsolutePath, name: String) -> TargetNode? {
         findTargetNode(path: path, name: name)
     }
@@ -226,6 +245,16 @@ public class Graph: Graphing {
 
         return targetNode.targetDependencies
             .filter { $0.path == path }
+    }
+
+    public func testTargetsDependingOn(path: AbsolutePath, name: String) -> [TargetNode] {
+        guard let targetNode = findTargetNode(path: path, name: name) else {
+            return []
+        }
+        return targets(at: path)
+            .filter { $0.target.product.testsBundle }
+            .filter { $0.targetDependencies.contains(targetNode) }
+            .sorted { $0.target.name < $1.target.name }
     }
 
     public func staticDependencies(path: AbsolutePath, name: String) -> [GraphDependencyReference] {
@@ -356,7 +385,7 @@ public class Graph: Graphing {
         let isDynamicAndLinkable = frameworkUsesDynamicLinking()
 
         /// Precompiled frameworks
-        let precompiledFrameworks = findAll(targetNode: targetNode, test: isDynamicAndLinkable)
+        let precompiledFrameworks = findAll(targetNode: targetNode, test: isDynamicAndLinkable, skip: canEmbedProducts)
             .lazy
             .map(\.path)
             .map(GraphDependencyReference.absolute)
@@ -437,7 +466,7 @@ public class Graph: Graphing {
         return references
     }
 
-    public func findAll<T: GraphNode>(targetNode: TargetNode, test: (T) -> Bool = { _ in true }, skip: (T) -> Bool = { _ in false }) -> Set<T> {
+    public func findAll<T: GraphNode, S: GraphNode>(targetNode: TargetNode, test: (T) -> Bool = { _ in true }, skip: (S) -> Bool = { _ in false }) -> Set<T> {
         var stack = Stack<GraphNode>()
 
         stack.push(targetNode)
@@ -460,7 +489,7 @@ public class Graph: Graphing {
                 references.insert(matchingNode)
             }
 
-            if node != targetNode, let node = node as? T, skip(node) {
+            if node != targetNode, let node = node as? S, skip(node) {
                 continue
             } else if let targetNode = node as? TargetNode {
                 for child in targetNode.dependencies where !visited.contains(child) {

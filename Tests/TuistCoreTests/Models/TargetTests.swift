@@ -6,7 +6,7 @@ import XCTest
 
 final class TargetTests: TuistUnitTestCase {
     func test_validSourceExtensions() {
-        XCTAssertEqual(Target.validSourceExtensions, ["m", "swift", "mm", "cpp", "c", "d", "intentdefinition"])
+        XCTAssertEqual(Target.validSourceExtensions, ["m", "swift", "mm", "cpp", "c", "d", "intentdefinition", "xcmappingmodel"])
     }
 
     func test_productName_when_staticLibrary() {
@@ -86,22 +86,25 @@ final class TargetTests: TuistUnitTestCase {
             "sources/aTests.swift",
             "sources/bTests.swift",
             "sources/kTests.kt",
+            "sources/c/c.swift",
+            "sources/c/cTests.swift",
         ])
 
         // When
         let sources = try Target.sources(projectPath: temporaryPath,
                                          sources: [(
-                                                glob: temporaryPath.appending(RelativePath("sources/**")).pathString,
-                                                excluding: temporaryPath.appending(RelativePath("sources/**/*Tests.swift")).pathString,
-                                                compilerFlags: nil
-                                            )])
+                                             glob: temporaryPath.appending(RelativePath("sources/**")).pathString,
+                                                   excluding: temporaryPath.appending(RelativePath("sources/**/*Tests.swift")).pathString,
+                                                   compilerFlags: nil
+                                         )])
 
         // Then
         let relativeSources = sources.map { $0.path.relative(to: temporaryPath).pathString }
 
         XCTAssertEqual(Set(relativeSources), Set([
             "sources/a.swift",
-            "sources/b.swift"
+            "sources/b.swift",
+            "sources/c/c.swift",
         ]))
     }
 

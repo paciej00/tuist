@@ -47,6 +47,35 @@ final class GraphTests: TuistUnitTestCase {
         XCTAssertEqual(dependencies.first?.target.name, "Dependency")
     }
 
+    func test_testTargetsDependingOn() throws {
+        // given
+        let target = Target.test(name: "Main")
+        let dependentTarget = Target.test(name: "Dependency", product: .staticLibrary)
+        let testTarget1 = Target.test(name: "MainTests1", product: .unitTests)
+        let testTarget2 = Target.test(name: "MainTests2", product: .unitTests)
+        let testTarget3 = Target.test(name: "MainTests3", product: .unitTests)
+        let testTargets = [testTarget1, testTarget2, testTarget3]
+        let project = Project.test(targets: [target, dependentTarget] + testTargets)
+
+        let dependencyNode = TargetNode(project: project, target: dependentTarget, dependencies: [])
+        let targetNode = TargetNode(project: project, target: target, dependencies: [dependencyNode])
+        let testsNodes = testTargets.map { TargetNode(project: project, target: $0, dependencies: [targetNode]) }
+        let cache = GraphLoaderCache()
+        cache.add(targetNode: targetNode)
+        testsNodes.forEach {
+            cache.add(targetNode: $0)
+        }
+        let graph = Graph.test(cache: cache)
+
+        // when
+        let testDependencies = graph.testTargetsDependingOn(path: project.path, name: target.name)
+
+        // then
+        let testDependenciesNames = try XCTUnwrap(testDependencies).map { $0.name }
+        XCTAssertEqual(testDependenciesNames.count, 3)
+        XCTAssertEqual(testDependenciesNames, ["MainTests1", "MainTests2", "MainTests3"])
+    }
+
     func test_linkableDependencies_whenPrecompiled() throws {
         let target = Target.test(name: "Main")
         let precompiledNode = FrameworkNode(path: AbsolutePath("/test/test.framework"))
@@ -709,6 +738,34 @@ final class GraphTests: TuistUnitTestCase {
         XCTAssertTrue(result.isEmpty)
     }
 
+    func test_embeddableDependencies_whenUITest_andAppPrecompiledDepndencies() throws {
+        // Given
+        let precompiledNode = mockDynamicFrameworkNode(at: AbsolutePath("/test/test.framework"))
+        let app = Target.test(name: "App", product: .app)
+        let uiTests = Target.test(name: "AppUITests", product: .uiTests)
+        let project = Project.test(path: "/path/a")
+
+        let appNode = TargetNode(project: project, target: app, dependencies: [precompiledNode])
+        let uiTestsNode = TargetNode(project: project, target: uiTests, dependencies: [appNode])
+
+        let cache = GraphLoaderCache()
+        cache.add(project: project)
+        cache.add(precompiledNode: precompiledNode)
+        cache.add(targetNode: appNode)
+        cache.add(targetNode: uiTestsNode)
+
+        let graph = Graph(name: "Graph",
+                          entryPath: project.path,
+                          cache: cache,
+                          entryNodes: [appNode, uiTestsNode])
+
+        // When
+        let result = try graph.embeddableFrameworks(path: project.path, name: uiTests.name)
+
+        // Then
+        XCTAssertTrue(result.isEmpty)
+    }
+
     func test_librariesSearchPaths() throws {
         // Given
         let target = Target.test(name: "Main")
@@ -951,6 +1008,15 @@ final class GraphTests: TuistUnitTestCase {
     }
 
     // MARK: - Helpers
+
+    private func mockDynamicFrameworkNode(at path: AbsolutePath) -> FrameworkNode {
+        let precompiledNode = FrameworkNode(path: path)
+        let binaryPath = path.appending(component: path.basenameWithoutExt)
+        system.succeedCommand("/usr/bin/file",
+                              binaryPath.pathString,
+                              output: "dynamically linked")
+        return precompiledNode
+    }
 
     private func sdkDependency(from dependency: GraphDependencyReference) -> SDKPathAndStatus? {
         switch dependency {

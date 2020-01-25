@@ -165,6 +165,12 @@ module.exports = {
         gatsbyRemarkPlugins: [
           `gatsby-remark-smartypants`,
           {
+            resolve: `gatsby-remark-images`,
+            options: {
+              maxWidth: 590,
+            },
+          },
+          {
             resolve: `gatsby-remark-social-cards`,
             options: {
               type: 'blog-post',
@@ -191,6 +197,7 @@ module.exports = {
               yMargin: 24,
             },
           },
+          'gatsby-remark-check-links',
         ],
       },
     },
@@ -207,5 +214,6 @@ module.exports = {
       },
     },
     'gatsby-plugin-meta-redirect',
+    `gatsby-plugin-robots-txt`,
   ],
 }

@@ -52,6 +52,7 @@ protocol BuildPhaseGenerating: AnyObject {
                          sourceRootPath: AbsolutePath) throws
 }
 
+// swiftlint:disable:next type_body_length
 final class BuildPhaseGenerator: BuildPhaseGenerating {
     // MARK: - Attributes
 
@@ -105,8 +106,10 @@ final class BuildPhaseGenerator: BuildPhaseGenerating {
                                                           name: action.name,
                                                           inputPaths: action.inputPaths.map { $0.relative(to: sourceRootPath).pathString },
                                                           outputPaths: action.outputPaths.map { $0.relative(to: sourceRootPath).pathString },
-                                                          inputFileListPaths: action.inputFileListPaths.map { $0.relative(to: sourceRootPath).pathString },
-                                                          outputFileListPaths: action.outputFileListPaths.map { $0.relative(to: sourceRootPath).pathString },
+                                                          inputFileListPaths: action.inputFileListPaths.map { $0.relative(to: sourceRootPath).pathString }, // swiftlint:disable:this line_length
+                                                          
+                                                          outputFileListPaths: action.outputFileListPaths.map { $0.relative(to: sourceRootPath).pathString }, // swiftlint:disable:this line_length
+                                                          
                                                           shellPath: "/bin/sh",
                                                           shellScript: action.shellScript(sourceRootPath: sourceRootPath))
             pbxproj.add(object: buildPhase)
@@ -148,20 +151,21 @@ final class BuildPhaseGenerator: BuildPhaseGenerating {
         pbxproj.add(object: headersBuildPhase)
         pbxTarget.buildPhases.append(headersBuildPhase)
 
-        let addHeader: (AbsolutePath, String) throws -> Void = { path, accessLevel in
+        let addHeader: (AbsolutePath, String?) throws -> Void = { path, accessLevel in
             guard let fileReference = fileElements.file(path: path) else {
                 throw BuildPhaseGenerationError.missingFileReference(path)
             }
-            let pbxBuildFile = PBXBuildFile(file: fileReference, settings: [
-                "ATTRIBUTES": [accessLevel.capitalized],
-            ])
+            let settings: [String: [String]]? = accessLevel.map {
+                ["ATTRIBUTES": [$0.capitalized]]
+            }
+            let pbxBuildFile = PBXBuildFile(file: fileReference, settings: settings)
             pbxproj.add(object: pbxBuildFile)
             headersBuildPhase.files?.append(pbxBuildFile)
         }
 
         try headers.private.sorted().forEach { try addHeader($0, "private") }
         try headers.public.sorted().forEach { try addHeader($0, "public") }
-        try headers.project.sorted().forEach { try addHeader($0, "project") }
+        try headers.project.sorted().forEach { try addHeader($0, nil) }
     }
 
     func generateResourcesBuildPhase(path: AbsolutePath,
@@ -289,7 +293,7 @@ final class BuildPhaseGenerator: BuildPhaseGenerating {
         let refs = sortedAppExtensions.compactMap { fileElements.product(target: $0.target.name) }
 
         refs.forEach {
-            let pbxBuildFile = PBXBuildFile(file: $0)
+            let pbxBuildFile = PBXBuildFile(file: $0, settings: ["ATTRIBUTES": ["RemoveHeadersOnCopy"]])
             pbxproj.add(object: pbxBuildFile)
             appExtensionsBuildPhase.files?.append(pbxBuildFile)
         }
@@ -315,7 +319,7 @@ final class BuildPhaseGenerator: BuildPhaseGenerating {
         let refs = sortedWatchApps.compactMap { fileElements.product(target: $0.target.name) }
 
         refs.forEach {
-            let pbxBuildFile = PBXBuildFile(file: $0)
+            let pbxBuildFile = PBXBuildFile(file: $0, settings: ["ATTRIBUTES": ["RemoveHeadersOnCopy"]])
             pbxproj.add(object: pbxBuildFile)
             embedWatchAppBuildPhase.files?.append(pbxBuildFile)
         }

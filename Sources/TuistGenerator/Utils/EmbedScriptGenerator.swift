@@ -28,6 +28,8 @@ struct EmbedScript {
 }
 
 final class EmbedScriptGenerator: EmbedScriptGenerating {
+    typealias FrameworkScript = (script: String, inputPaths: [RelativePath], outputPaths: [String])
+
     let frameworkMetadataProvider: FrameworkMetadataProviding
 
     init(frameworkMetadataProvider: FrameworkMetadataProviding = FrameworkMetadataProvider()) {
@@ -47,7 +49,7 @@ final class EmbedScriptGenerator: EmbedScriptGenerating {
     // MARK: - Fileprivate
 
     fileprivate func frameworksScript(sourceRootPath: AbsolutePath,
-                                      frameworkPaths: [AbsolutePath]) throws -> (script: String, inputPaths: [RelativePath], outputPaths: [String]) {
+                                      frameworkPaths: [AbsolutePath]) throws -> FrameworkScript {
         var script = ""
         var inputPaths: [RelativePath] = []
         var outputPaths: [String] = []
