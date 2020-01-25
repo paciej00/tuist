@@ -593,7 +593,7 @@ extension TuistCore.Scheme {
                       runAction: runAction,
                       archiveAction: archiveAction)
     }
-
+    
     static func from(manifest: ProjectDescription.Scheme, workspacePath: AbsolutePath, generatorPaths: GeneratorPaths) throws -> TuistCore.Scheme {
         let name = manifest.name
         let shared = manifest.shared
@@ -631,10 +631,10 @@ extension TuistCore.TestAction {
         let codeCoverageTargets = try manifest.codeCoverageTargets.map { TuistCore.TargetReference(projectPath: try resolveProjectPath(projectPath: $0.projectPath,
                                                                                                                                        defaultPath: projectPath,
                                                                                                                                        generatorPaths: generatorPaths),
-                                                                                                   name: $0.targetName) }
+                                                                                               name: $0.targetName) }
         let preActions = try manifest.preActions.map { try TuistCore.ExecutionAction.from(manifest: $0, projectPath: projectPath, generatorPaths: generatorPaths) }
         let postActions = try manifest.postActions.map { try TuistCore.ExecutionAction.from(manifest: $0, projectPath: projectPath, generatorPaths: generatorPaths) }
-
+        
         return TestAction(targets: targets,
                           arguments: arguments,
                           configurationName: configurationName,
@@ -697,9 +697,9 @@ extension TuistCore.ExecutionAction {
                      projectPath: AbsolutePath,
                      generatorPaths: GeneratorPaths) throws -> TuistCore.ExecutionAction {
         let targetReference: TuistCore.TargetReference? = try manifest.target.map { .project(path: try resolveProjectPath(projectPath: $0.projectPath,
-                                                                                                                          defaultPath: projectPath,
-                                                                                                                          generatorPaths: generatorPaths),
-                                                                                             target: $0.targetName) }
+                                                                                                                  defaultPath: projectPath,
+                                                                                                                  generatorPaths: generatorPaths),
+                                                                                         target: $0.targetName) }
         return ExecutionAction(title: manifest.title, scriptText: manifest.scriptText, target: targetReference)
     }
 }

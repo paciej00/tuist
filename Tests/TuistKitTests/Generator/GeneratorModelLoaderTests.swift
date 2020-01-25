@@ -554,7 +554,7 @@ class GeneratorModelLoaderTest: TuistUnitTestCase {
         let arguments = ArgumentsManifest.test(environment: ["FOO": "BAR", "FIZ": "BUZZ"],
                                                launch: ["--help": true,
                                                         "subcommand": false])
-
+        
         let projectPath = AbsolutePath("/somepath")
         let generatorPaths = GeneratorPaths(manifestDirectory: projectPath)
 
@@ -571,7 +571,7 @@ class GeneratorModelLoaderTest: TuistUnitTestCase {
                                            buildAction: buildAction,
                                            testAction: testAction,
                                            runAction: runActions)
-
+        
         // When
         let model = try TuistCore.Scheme.from(manifest: manifest, projectPath: projectPath, generatorPaths: generatorPaths)
 
@@ -839,6 +839,7 @@ class GeneratorModelLoaderTest: TuistUnitTestCase {
                 generatorPaths: GeneratorPaths,
                 file: StaticString = #file,
                 line: UInt = #line) throws {
+
         let targets = try manifest.targets.map { try TestableTarget.from(manifest: $0, projectPath: path, generatorPaths: generatorPaths) }
         XCTAssertEqual(testAction.targets, targets, file: file, line: line)
         XCTAssertTrue(testAction.configurationName == manifest.configurationName, file: file, line: line)
@@ -888,7 +889,7 @@ class GeneratorModelLoaderTest: TuistUnitTestCase {
             XCTFail("mismatch of optionals", file: file, line: line)
         }
     }
-
+    
     private func resolveProjectPath(projectPath: Path?, defaultPath: AbsolutePath, generatorPaths: GeneratorPaths) throws -> AbsolutePath {
         if let projectPath = projectPath { return try generatorPaths.resolve(path: projectPath) }
         return defaultPath
